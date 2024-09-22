@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="mt-4">AI Chat</h2>
+        <div id="chat" class="border p-3 mb-3" style="height: 300px; overflow-y: scroll;"></div>
+        <div class="input-group mb-3">
+            <input id="message" type="text" class="form-control" placeholder="Type your message here..." aria-label="User message">
+            <div class="input-group-append">
+                <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const messageInput = document.getElementById('message');
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Display user message
+            addMessageToChat(`You: ${message}`);
+            messageInput.value = '';
+
+            const chat = document.getElementById('chat');
+            chat.scrollTop = chat.scrollHeight; // Scroll to bottom
+
+            try {
+                const response = await fetch('https://api.cohere.ai/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer DgvzJhcAm5YFe3tmrJGl3bJQmidhk7wSfxnSvIiw',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'command-xlarge',
+                        prompt: message,
+                        max_tokens: 300,
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                const botMessage = data.text || 'Sorry, there was an error.';
+
+                // Display bot message
+                addMessageToChat(`Bot: ${botMessage}`);
+            } catch (error) {
+                console.error('Error:', error);
+                addMessageToChat('Bot: Sorry, there was an error.');
+            }
+        }
+
+        function addMessageToChat(message) {
+            const chat = document.getElementById('chat');
+            chat.innerHTML += `<div>${message}</div>`;
+        }
+    </script>
+</body>
+</html>
