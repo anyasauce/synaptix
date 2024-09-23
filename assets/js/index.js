@@ -110,3 +110,130 @@ function sendFeedback(isHelpful) {
 function showFeedbackSection() {
     document.querySelector('.feedback-section').style.display = 'block';
 }
+
+async function processImage() {
+    const imageInput = document.getElementById('imageUpload');
+    const chat = document.getElementById('chat');
+
+    if (imageInput.files.length === 0) {
+        alert('Please upload an image first.');
+        return;
+    }
+
+    const file = imageInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function (event) {
+        const imageData = event.target.result;
+
+        chat.innerHTML += `<div class="chat-message user-message"><strong>You:</strong> (Image uploaded)</div>`;
+        const loadingIndicator = document.getElementById('loading');
+        loadingIndicator.style.display = 'block';
+
+        try {
+            const { data: { text } } = await Tesseract.recognize(
+                imageData,
+                'eng',
+                {
+                    logger: info => console.log(info)
+                }
+            );
+
+            loadingIndicator.style.display = 'none';
+
+            if (text.trim()) {
+                chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> <span>${text}</span></div>`;
+                await sendAIMessage(text);
+            } else {
+                chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> No text found in the image.</div>`;
+            }
+        } catch (error) {
+            console.error('Error during OCR:', error);
+            loadingIndicator.style.display = 'none';
+            chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> Sorry, there was an error reading the image. Please try a different image.</div>`;
+        }
+    };
+
+    reader.readAsDataURL(file);
+}
+
+async function sendAIMessage(message) {
+    const chat = document.getElementById('chat');
+    const loadingIndicator = document.getElementById('loading');
+    loadingIndicator.style.display = 'block';
+
+    try {
+        const response = await fetch('https://api.cohere.ai/generate', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer DgvzJhcAm5YFe3tmrJGl3bJQmidhk7wSfxnSvIiw',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'command-xlarge',
+                prompt: message,
+                max_tokens: 300,
+                temperature: 0.7
+            })
+        });
+
+        const data = await response.json();
+        loadingIndicator.style.display = 'none';
+
+        const formattedResponse = data.text
+            ? data.text.replace(/\n/g, '<br>')
+            : 'Sorry, there was an error.';
+
+        chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> <span>${formattedResponse}</span></div>`;
+    } catch (error) {
+        console.error('Error:', error);
+        loadingIndicator.style.display = 'none';
+        chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> Sorry, there was an error.</div>`;
+    } finally {
+        chat.scrollTop = chat.scrollHeight;
+    }
+}
+
+async function sendUserMessage() {
+    const messageInput = document.getElementById('message');
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    const chat = document.getElementById('chat');
+    chat.innerHTML += `<div class="chat-message user-message"><strong>You:</strong> ${message}</div>`;
+
+    const loadingIndicator = document.getElementById('loading');
+    loadingIndicator.style.display = 'block';
+
+    try {
+        const response = await fetch('https://api.cohere.ai/generate', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer DgvzJhcAm5YFe3tmrJGl3bJQmidhk7wSfxnSvIiw',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'command-xlarge',
+                prompt: message,
+                max_tokens: 300,
+                temperature: 0.7
+            })
+        });
+
+        const data = await response.json();
+        loadingIndicator.style.display = 'none';
+
+        const formattedResponse = data.text
+            ? data.text.replace(/\n/g, '<br>')
+            : 'Sorry, there was an error.';
+
+        chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> <span>${formattedResponse}</span></div>`;
+    } catch (error) {
+        console.error('Error:', error);
+        loadingIndicator.style.display = 'none';
+        chat.innerHTML += `<div class="chat-message bot-message"><strong>Bot:</strong> Sorry, there was an error.</div>`;
+    } finally {
+        messageInput.value = '';
+        chat.scrollTop = chat.scrollHeight;
+    }
+}
